@@ -6,6 +6,7 @@ import (
 
 	"cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
+	circuittypes "cosmossdk.io/x/circuit/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -29,7 +30,7 @@ const Name = "v050"
 var Upgrade = upgrades.Upgrade{
 	UpgradeName:          Name,
 	CreateUpgradeHandler: CreateUpgradeHandler,
-	StoreUpgrades:        storetypes.StoreUpgrades{},
+	StoreUpgrades:        storetypes.StoreUpgrades{Added: []string{circuittypes.StoreKey}},
 }
 
 func CreateUpgradeHandler(

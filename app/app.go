@@ -34,6 +34,9 @@ import (
 	autocli "cosmossdk.io/client/v2/autocli"
 	appmodule "cosmossdk.io/core/appmodule"
 	storetypes "cosmossdk.io/store/types"
+	circuit "cosmossdk.io/x/circuit"
+	circuitkeeper "cosmossdk.io/x/circuit/keeper"
+	circuittypes "cosmossdk.io/x/circuit/types"
 	"cosmossdk.io/x/evidence"
 	evidencekeeper "cosmossdk.io/x/evidence/keeper"
 	evidencetypes "cosmossdk.io/x/evidence/types"
@@ -57,6 +60,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	sigtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
@@ -64,6 +68,7 @@ import (
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
@@ -166,6 +171,8 @@ var (
 
 		// passage3d claim module
 		claim.AppModuleBasic{},
+
+		circuit.AppModuleBasic{},
 	)
 
 	// module account permissions
@@ -233,6 +240,8 @@ type PassageApp struct {
 
 	ClaimKeeper claimkeeper.Keeper
 
+	CircuitKeeper circuitkeeper.Keeper
+
 	// the module manager
 	mm *module.Manager
 
@@ -277,6 +286,7 @@ func NewPassageApp(
 		govtypes.StoreKey, paramstypes.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey,
 		evidencetypes.StoreKey, capabilitytypes.StoreKey, crisistypes.StoreKey, consensusparamtypes.StoreKey,
 		authzkeeper.StoreKey, claimtypes.StoreKey, wasm.StoreKey,
+		circuittypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	// NOTE: The testingkey is just mounted for testing purposes. Actual applications should
@@ -301,6 +311,9 @@ func NewPassageApp(
 	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[consensusparamtypes.StoreKey]), authority, runtime.ProvideEventService())
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
 
+	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuittypes.StoreKey]), authority, authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()))
+	bApp.SetCircuitBreaker(&app.CircuitKeeper)
+
 	app.CapabilityKeeper = capabilitykeeper.NewKeeper(appCodec, keys[capabilitytypes.StoreKey], memKeys[capabilitytypes.MemStoreKey])
 	// Applications that wish to enforce statically created ScopedKeepers should call `Seal` after creating
 	// their scoped modules in `NewApp` with `ScopeToModule`
@@ -322,6 +335,19 @@ func NewPassageApp(
 	stakingKeeper := stakingkeeper.NewKeeper(
 		appCodec, runtime.NewKVStoreService(keys[stakingtypes.StoreKey]), app.AccountKeeper, app.BankKeeper, authority, authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()), authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
 	)
+	enabledSignModes := append(authtx.DefaultSignModes, sigtypes.SignMode_SIGN_MODE_TEXTUAL)
+	txConfigOpts := authtx.ConfigOptions{
+		EnabledSignModes:           enabledSignModes,
+		TextualCoinMetadataQueryFn: txmodule.NewBankKeeperCoinMetadataQueryFn(app.BankKeeper),
+	}
+	txConfig, err := authtx.NewTxConfigWithOptions(appCodec, txConfigOpts)
+	if err != nil {
+		panic(err)
+	}
+	encodingConfig.TxConfig = txConfig
+	bApp.SetTxDecoder(txConfig.TxDecoder())
+	bApp.SetTxEncoder(txConfig.TxEncoder())
+
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec, runtime.NewKVStoreService(keys[minttypes.StoreKey]), stakingKeeper,
 		app.AccountKeeper, app.BankKeeper, authtypes.FeeCollectorName, authority,
@@ -473,6 +499,7 @@ func NewPassageApp(
 		transfer.NewAppModule(app.TransferKeeper),
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 		claim.NewAppModule(appCodec, app.ClaimKeeper),
+		circuit.NewAppModule(appCodec, app.CircuitKeeper),
 		wasmModule,
 	)
 
@@ -559,6 +586,7 @@ func NewPassageApp(
 		vestingtypes.ModuleName,
 		claimtypes.ModuleName,
 		wasm.ModuleName,
+		circuittypes.ModuleName,
 	)
 
 	// Uncomment if you want to set a custom migration order here.
@@ -636,6 +664,7 @@ func NewPassageApp(
 			IBCKeeper:         app.IBCKeeper,
 			WasmConfig:        wasmConfig,
 			TxCounterStoreKey: keys[wasm.StoreKey],
+			CircuitKeeper:     &app.CircuitKeeper,
 		},
 	)
 

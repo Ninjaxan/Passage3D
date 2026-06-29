@@ -2,6 +2,7 @@ package app
 
 import (
 	storetypes "cosmossdk.io/store/types"
+	circuitante "cosmossdk.io/x/circuit/ante"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -22,6 +23,7 @@ type HandlerOptions struct {
 	WasmConfig        wasmtypes.WasmConfig
 	IBCKeeper         *ibckeeper.Keeper
 	Codec             codec.Codec
+	CircuitKeeper     circuitante.CircuitBreaker
 }
 
 // NewAnteHandler returns an AnteHandler that checks and increments sequence
@@ -47,6 +49,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 
 	anteDecorators := []sdk.AnteDecorator{
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
+		circuitante.NewCircuitBreakerDecorator(options.CircuitKeeper),
 		wasmkeeper.NewLimitSimulationGasDecorator(options.WasmConfig.SimulationGasLimit),
 		wasmkeeper.NewCountTXDecorator(runtime.NewKVStoreService(options.TxCounterStoreKey.(*storetypes.KVStoreKey))),
 		ante.NewExtensionOptionsDecorator(nil),
