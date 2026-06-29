@@ -478,6 +478,10 @@ func NewPassageApp(
 	// CanWithdrawInvariant invariant.
 	// NOTE: staking module is required if HistoricalEntries param > 0
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
+	app.mm.SetOrderPreBlockers(
+		upgradetypes.ModuleName,
+	)
+
 	app.mm.SetOrderBeginBlockers(
 		upgradetypes.ModuleName,
 		consensusparamtypes.ModuleName,
@@ -614,6 +618,7 @@ func NewPassageApp(
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
+	app.SetPreBlocker(app.PreBlocker)
 	app.SetBeginBlocker(app.BeginBlocker)
 
 	anteHandler, err := NewAnteHandler(
@@ -698,6 +703,12 @@ func (app *PassageApp) setupUpgradeStoreLoaders() {
 
 // Name returns the name of the App
 func (app *PassageApp) Name() string { return app.BaseApp.Name() }
+
+// PreBlocker runs module PreBlock (notably x/upgrade, which applies scheduled
+// upgrade migrations) before any BeginBlocker.
+func (app *PassageApp) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+	return app.mm.PreBlock(ctx)
+}
 
 // BeginBlocker application updates every begin block
 func (app *PassageApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
