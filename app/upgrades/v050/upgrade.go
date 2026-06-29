@@ -94,10 +94,10 @@ func CreateUpgradeHandler(
 		}
 		expeditedVoting := 24 * time.Hour
 		gparams.ExpeditedVotingPeriod = &expeditedVoting
-		gparams.ExpeditedThreshold = math.LegacyNewDecWithPrec(67, 2).String()                           // 67%
-		gparams.Quorum = math.LegacyNewDecWithPrec(50, 2).String()                                       // 50% (shared)
-		gparams.VetoThreshold = math.LegacyNewDecWithPrec(50, 2).String()                                // 50% (shared)
-		gparams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin("upasg", math.NewInt(1_000_000_000_000))) // 1,000,000 PASG
+		gparams.ExpeditedThreshold = math.LegacyNewDecWithPrec(67, 2).String()                                     // 67%
+		gparams.Quorum = math.LegacyNewDecWithPrec(50, 2).String()                                                 // 50% (shared)
+		gparams.VetoThreshold = math.LegacyNewDecWithPrec(50, 2).String()                                          // 50% (shared)
+		gparams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(sparams.BondDenom, math.NewInt(1_000_000_000_000))) // 1,000,000 PASG (bond denom = upasg on mainnet)
 		if err := govKeeper.Params.Set(ctx, gparams); err != nil {
 			return vm, err
 		}
