@@ -16,6 +16,7 @@ import (
 
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 
+	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/envadiv/Passage3D/app"
 
 	"github.com/CosmWasm/wasmd/x/wasm"
@@ -39,10 +40,40 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// basicManager is built once from a throwaway app so every AppModuleBasic
+// carries its codecs (0.50 â a bare AppModuleBasic{} nil-panics in GetTxCmd).
+var basicManager module.BasicManager
+
+type rootAppOptions struct{ home string }
+
+func (o rootAppOptions) Get(k string) interface{} {
+	if k == flags.FlagHome {
+		return o.home
+	}
+	return nil
+}
+
+func rootTempDir() string {
+	dir, err := os.MkdirTemp("", "passage-cli")
+	if err != nil {
+		return app.DefaultNodeHome
+	}
+	return dir
+}
+
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
 func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
+
+	tmpHome := rootTempDir()
+	tempApp := app.NewPassageApp(
+		log.NewNopLogger(), dbm.NewMemDB(), nil, false,
+		map[int64]bool{}, tmpHome, uint(1), encodingConfig,
+		app.GetEnabledProposals(), rootAppOptions{home: tmpHome}, []wasm.Option(nil),
+	)
+	basicManager = tempApp.BasicModuleManager
+
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -147,14 +178,14 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig appparams.EncodingConfig
 	cfg.Seal()
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+		genutilcli.InitCmd(basicManager, app.DefaultNodeHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, genutiltypes.DefaultMessageValidator, authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix())),
 		genutilcli.MigrateGenesisCmd(genutilcli.MigrationMap),
-		genutilcli.GenTxCmd(app.ModuleBasics, encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix())),
-		genutilcli.ValidateGenesisCmd(app.ModuleBasics),
+		genutilcli.GenTxCmd(basicManager, encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultNodeHome, authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix())),
+		genutilcli.ValidateGenesisCmd(basicManager),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
-		testnetCmd(app.ModuleBasics, banktypes.GenesisBalancesIterator{}),
+		testnetCmd(basicManager, banktypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
 	)
 
@@ -191,7 +222,7 @@ func queryCommand() *cobra.Command {
 		authcmd.QueryTxCmd(),
 	)
 
-	app.ModuleBasics.AddQueryCommands(cmd)
+	basicManager.AddQueryCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return cmd
@@ -217,7 +248,7 @@ func txCommand() *cobra.Command {
 		authcmd.GetDecodeCommand(),
 	)
 
-	app.ModuleBasics.AddTxCommands(cmd)
+	basicManager.AddTxCommands(cmd)
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
 	return cmd

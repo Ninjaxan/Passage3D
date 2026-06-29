@@ -10,6 +10,7 @@ import (
 	appparams "github.com/envadiv/Passage3D/app/params"
 	"github.com/envadiv/Passage3D/app/upgrades"
 	v047 "github.com/envadiv/Passage3D/app/upgrades/v047"
+	v050 "github.com/envadiv/Passage3D/app/upgrades/v050"
 	"github.com/envadiv/Passage3D/app/upgrades/v2.2.0"
 
 	"github.com/envadiv/Passage3D/x/claim"
@@ -177,7 +178,7 @@ var (
 		wasm.ModuleName:                {authtypes.Burner},
 	}
 
-	Upgrades = []upgrades.Upgrade{v2.Upgrade, v047.Upgrade}
+	Upgrades = []upgrades.Upgrade{v2.Upgrade, v047.Upgrade, v050.Upgrade}
 )
 
 var (
@@ -231,6 +232,9 @@ type PassageApp struct {
 
 	// the module manager
 	mm *module.Manager
+
+	// basic module manager (0.50: derived from mm so each AppModuleBasic carries its codecs)
+	BasicModuleManager module.BasicManager
 
 	// simulation manager
 	sm *module.SimulationManager
@@ -558,6 +562,16 @@ func NewPassageApp(
 	// 	paramstypes.ModuleName, upgradetypes.ModuleName, vestingtypes.ModuleName,
 	// 	ibcexported.ModuleName, ibctransfertypes.ModuleName, ibctransfertypes.ModuleName,
 	// )
+
+	app.BasicModuleManager = module.NewBasicManagerFromManager(
+		app.mm,
+		map[string]module.AppModuleBasic{
+			genutiltypes.ModuleName: genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
+			govtypes.ModuleName: gov.NewAppModuleBasic([]govclient.ProposalHandler{
+				paramsclient.ProposalHandler,
+			}),
+		},
+	)
 
 	app.mm.RegisterInvariants(app.CrisisKeeper)
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
