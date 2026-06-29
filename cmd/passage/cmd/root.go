@@ -114,6 +114,10 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 
 	initRootCmd(rootCmd, encodingConfig)
 
+	if err := tempApp.AutoCliOpts().EnhanceRootCommand(rootCmd); err != nil {
+		panic(err)
+	}
+
 	return rootCmd, encodingConfig
 }
 

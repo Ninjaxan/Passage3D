@@ -3,6 +3,8 @@ go 1.21
 module github.com/envadiv/Passage3D
 
 require (
+	cosmossdk.io/client/v2 v2.0.0-beta.1
+	cosmossdk.io/core v0.11.0
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/log v1.4.1
 	cosmossdk.io/math v1.4.0
@@ -42,7 +44,6 @@ require (
 	cloud.google.com/go/storage v1.38.0 // indirect
 	cosmossdk.io/api v0.7.6 // indirect
 	cosmossdk.io/collections v0.4.0 // indirect
-	cosmossdk.io/core v0.11.0 // indirect
 	cosmossdk.io/depinject v1.1.0 // indirect
 	cosmossdk.io/x/tx v0.13.7 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
