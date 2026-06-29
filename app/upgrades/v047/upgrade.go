@@ -1,9 +1,9 @@
 package v047
 
 import (
-	"github.com/cosmos/cosmos-sdk/baseapp"
+	"context"
 	storetypes "cosmossdk.io/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -12,8 +12,6 @@ import (
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distribution "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	upgradetypes "cosmossdk.io/x/upgrade/types"
 
 	"github.com/envadiv/Passage3D/app/upgrades"
 	claim "github.com/envadiv/Passage3D/x/claim/keeper"
@@ -55,23 +53,8 @@ func CreateUpgradeHandler(
 	consensusParamsKeeper consensusparamkeeper.Keeper,
 	paramsKeeper paramskeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
-	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		ctx.Logger().Info("v047 upgrade: migrating Tendermint consensus params x/params -> x/consensus")
-
-		// The "baseapp" subspace is not registered by initParamsKeeper, so a
-		// fresh Subspace call is safe here (it would panic if already occupied).
-		legacyBaseAppSubspace := paramsKeeper.
-			Subspace(baseapp.Paramspace).
-			WithKeyTable(paramstypes.ConsensusParamsKeyTable())
-		baseapp.MigrateParams(ctx, legacyBaseAppSubspace, &consensusParamsKeeper)
-
-		ctx.Logger().Info("v047 upgrade: running module migrations")
-		vm, err := mm.RunMigrations(ctx, configurator, fromVM)
-		if err != nil {
-			return nil, err
-		}
-
-		ctx.Logger().Info("v047 upgrade: complete")
-		return vm, nil
+	return func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		// v047 already ran on mainnet (Passage v3.0.0); historical no-op under v0.50.
+		return mm.RunMigrations(ctx, configurator, fromVM)
 	}
 }
