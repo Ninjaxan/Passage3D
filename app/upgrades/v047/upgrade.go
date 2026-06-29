@@ -11,7 +11,9 @@ import (
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distribution "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 
 	"github.com/envadiv/Passage3D/app/upgrades"
 	claim "github.com/envadiv/Passage3D/x/claim/keeper"
@@ -52,6 +54,8 @@ func CreateUpgradeHandler(
 	_ claim.Keeper,
 	consensusParamsKeeper consensusparamkeeper.Keeper,
 	paramsKeeper paramskeeper.Keeper,
+	_ *stakingkeeper.Keeper,
+	_ govkeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
 	return func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
 		// v047 already ran on mainnet (Passage v3.0.0); historical no-op under v0.50.

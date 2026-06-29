@@ -678,6 +678,8 @@ func (app *PassageApp) setupUpgradeHandlers() {
 				app.ClaimKeeper,
 				app.ConsensusParamsKeeper,
 				app.ParamsKeeper,
+				app.StakingKeeper,
+				app.GovKeeper,
 			),
 		)
 	}
