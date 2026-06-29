@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"time"
 
+	"cosmossdk.io/log"
+	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/crypto/ed25519"
-	"github.com/cometbft/cometbft/libs/log"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
-	dbm "github.com/cometbft/cometbft-db"
 
 	"github.com/CosmWasm/wasmd/x/wasm"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -47,7 +47,7 @@ func setup(withGenesis bool, invCheckPeriod uint) (*PassageApp, GenesisState) {
 	encCdc := MakeEncodingConfig()
 	app := NewPassageApp(
 		log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome,
-		invCheckPeriod, encCdc, wasm.EnableAllProposals, EmptyAppOptions{}, emptyWasmOptions,
+		invCheckPeriod, encCdc, nil, EmptyAppOptions{}, emptyWasmOptions,
 	)
 	if withGenesis {
 		return app, NewDefaultGenesisState(encCdc.Marshaler)
