@@ -1,14 +1,14 @@
 package upgrades
 
 import (
-	store "github.com/cosmos/cosmos-sdk/store/types"
+	store "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	distribution "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	claim "github.com/envadiv/Passage3D/x/claim/keeper"
 )
 
