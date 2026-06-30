@@ -1,6 +1,6 @@
 #!/bin/bash
-# HOP-2 dry-run: synthetic 0.47 -> gov v1 MsgSoftwareUpgrade "v050" -> halt ->
-# swap 0.50 binary -> v050 handler (RunMigrations) -> chain continues ->
+# HOP-2 dry-run: synthetic 0.47 -> gov v1 MsgSoftwareUpgrade "4.0.0" -> halt ->
+# swap 0.50 binary -> 4.0.0 handler (RunMigrations) -> chain continues ->
 # REST/LCD QUERY BATTERY (the path Keplr/wallets use; the v3.0.0-outage catcher).
 export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
 OLD=${OLD:-/tmp/passaged}; NEW=${NEW:-/tmp/passaged050}
@@ -40,7 +40,7 @@ for i in $(seq 1 25); do sleep 3
 done
 echo "  v0.47 height=$CUR"
 
-echo "===== STAGE 3: schedule v050 upgrade (NO-QUERY tx path) ====="
+echo "===== STAGE 3: schedule 4.0.0 upgrade (NO-QUERY tx path) ====="
 UPGH=$((CUR + 35)); echo "  upgrade-height=$UPGH"
 GOVAUTH=$(python3 - <<'PY'
 import hashlib
@@ -69,7 +69,7 @@ PY
 )
 echo "  gov authority=$GOVAUTH"
 cat > /tmp/upg2_prop.json <<JSON
-{ "messages": [ { "@type": "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade", "authority": "$GOVAUTH", "plan": { "name": "v050", "height": "$UPGH", "info": "" } } ], "metadata": "ipfs://none", "deposit": "10000000stake", "title": "v050", "summary": "0.47 to 0.50" }
+{ "messages": [ { "@type": "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade", "authority": "$GOVAUTH", "plan": { "name": "4.0.0", "height": "$UPGH", "info": "" } } ], "metadata": "ipfs://none", "deposit": "10000000stake", "title": "4.0.0", "summary": "0.47 to 0.50" }
 JSON
 GEN="$KB --home $H --chain-id $CHAIN --gas 600000 --gas-prices 0stake --account-number 0"
 "$OLD" tx gov submit-proposal /tmp/upg2_prop.json --from val0 $GEN --sequence 1 --generate-only > /tmp/u1.json 2>/tmp/u1.err
@@ -88,7 +88,7 @@ grep -iE "code|raw_log" /tmp/upg2_vote.log | head -1 | sed "s/^/   vote: /"
 
 echo "===== STAGE 5: wait for halt at $UPGH ====="
 for i in $(seq 1 60); do sleep 3
-  grep -q 'UPGRADE "v050" NEEDED' /tmp/upg2_old.log 2>/dev/null && { echo "  HALT DETECTED"; break; }
+  grep -q 'UPGRADE "4.0.0" NEEDED' /tmp/upg2_old.log 2>/dev/null && { echo "  HALT DETECTED"; break; }
   kill -0 "$OLDPID" 2>/dev/null || { echo "  old node exited"; break; }
 done
 echo "  last 0.47 height:"; sed -r "s/\x1B\[[0-9;]*[mK]//g" /tmp/upg2_old.log | grep -oE "executed block height=[0-9]+" | tail -1 | sed 's/^/   /'
@@ -102,7 +102,7 @@ for i in $(seq 1 50); do sleep 3
   NH=$(sed -r "s/\x1B\[[0-9;]*[mK]//g" /tmp/upg2_new.log | grep -E "executed block" | grep -oE "height=[0-9]+" | grep -oE "[0-9]+" | tail -1)
   [ -n "$NH" ] && [ "$NH" -ge $((UPGH+8)) ] && break
 done
-echo "  apply log:"; sed -r "s/\x1B\[[0-9;]*[mK]//g" /tmp/upg2_new.log | grep -iE "applying upgrade|migrat|v050|upgrade complete" | head -6 | sed 's/^/   /'
+echo "  apply log:"; sed -r "s/\x1B\[[0-9;]*[mK]//g" /tmp/upg2_new.log | grep -iE "applying upgrade|migrat|4.0.0|upgrade complete" | head -6 | sed 's/^/   /'
 echo "  0.50 height (must be > $UPGH): ${NH:-NONE}"
 echo "  load/panic errors?"; sed -r "s/\x1B\[[0-9;]*[mK]//g" /tmp/upg2_new.log | grep -iE "panic:|CONSENSUS FAILURE|wrong app hash|failed to load|version does not exist" | grep -v log_level | head -3 | sed 's/^/   /' || echo "   none"
 [ -z "$NH" ] && { echo "  ABORT: 0.50 produced no blocks"; tail -5 /tmp/upg2_new.log | sed 's/^/   /'; kill -9 $NEWPID 2>/dev/null; exit 1; }

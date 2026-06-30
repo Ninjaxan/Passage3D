@@ -23,7 +23,10 @@ import (
 )
 
 // Name is the on-chain upgrade name for the SDK v0.47 -> v0.50 migration.
-const Name = "v050"
+// NOTE: the on-chain name is "4.0.0" (semver, per the v2.6.0 -> 3.0.0 -> 4.0.0
+// line). The Go package/dir stays `v050` (just an identifier); the on-chain name
+// is this string const and is what the gov proposal's plan.name must match.
+const Name = "4.0.0"
 
 // Upgrade migrates the chain from Cosmos SDK v0.47 to v0.50. StoreUpgrades.Added
 // is set in app.go alongside any new modules (e.g. x/circuit).
