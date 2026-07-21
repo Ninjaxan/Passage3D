@@ -53,20 +53,23 @@ func (o rootAppOptions) Get(k string) interface{} {
 	return nil
 }
 
-func rootTempDir() string {
-	dir, err := os.MkdirTemp("", "passage-cli")
-	if err != nil {
-		return app.DefaultNodeHome
-	}
-	return dir
-}
-
 // NewRootCmd creates a new root command for simd. It is called once in the
 // main function.
 func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
 
-	tmpHome := rootTempDir()
+	// Build a throwaway app in a temporary home just to populate basicManager
+	// (SDK 0.50 needs codecs on every AppModuleBasic). wasmd writes a wasm
+	// cache into this home on disk, so it MUST be removed afterwards — otherwise
+	// every CLI/daemon invocation leaks a /tmp/passage-cli* directory.
+	// Only remove a real temp dir: on MkdirTemp failure we fall back to the
+	// real node home, which must never be deleted.
+	tmpHome, err := os.MkdirTemp("", "passage-cli")
+	if err != nil {
+		tmpHome = app.DefaultNodeHome
+	} else {
+		defer os.RemoveAll(tmpHome)
+	}
 	tempApp := app.NewPassageApp(
 		log.NewNopLogger(), dbm.NewMemDB(), nil, false,
 		map[int64]bool{}, tmpHome, uint(1), encodingConfig,
